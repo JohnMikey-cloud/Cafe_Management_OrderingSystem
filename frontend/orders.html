@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brew &amp; Co. &mdash; Order Queue</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- ADD THIS SCRIPT TAG TO HEAD -->
+  <script src="js/auth.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">&#9749; Brew &amp; Co.</div>
+    <nav>
+      <a href="index.html">New Order</a>
+      <a href="orders.html" class="active" id="navOrderQueue">Order Queue</a>
+    </nav>
+    <span id="modeBadge" class="badge"></span>
+  </header>
+
+  <main class="single">
+    <h1>Order queue</h1>
+    <div id="statusFilters" class="chips">
+      <button class="chip active" data-status="ACTIVE">Active</button>
+      <button class="chip" data-status="PENDING">Pending</button>
+      <button class="chip" data-status="PREPARING">Preparing</button>
+      <button class="chip" data-status="READY">Ready</button>
+      <button class="chip" data-status="COMPLETED">Completed</button>
+      <button class="chip" data-status="CANCELLED">Cancelled</button>
+      <button class="chip" data-status="ALL">All</button>
+    </div>
+    <div id="orderList" class="orders"><p class="empty">Loading orders&hellip;</p></div>
+  </main>
+
+  <footer class="foot">Cafe Order Management System <span id="version"></span></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/orders.js"></script>
+</body>
+</html>

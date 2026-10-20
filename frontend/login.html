@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brew &amp; Co. &mdash; Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/login.css">
+  <script src="js/auth.js"></script>
+</head>
+<body class="login-body">
+  <main class="login-wrap">
+    <section class="login-card">
+      <div class="login-brand">&#9749; Brew &amp; Co.</div>
+      
+      <!-- Tab Navigation -->
+      <div class="auth-tabs" style="display: flex; gap: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); padding-bottom: 0.5rem;">
+        <button id="tabLogin" type="button" class="tab-btn active" style="background:none; border:none; font:inherit; font-weight:bold; cursor:pointer; color:var(--accent);">Log in</button>
+        <button id="tabSignup" type="button" class="tab-btn" style="background:none; border:none; font:inherit; font-weight:bold; cursor:pointer; color:var(--muted);">Sign up</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" novalidate>
+        <h1>Welcome back</h1>
+        <p class="login-sub">Log in to take and manage cafe orders.</p>
+
+        <label for="username">Username</label>
+        <input id="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false">
+
+        <label for="password">Password</label>
+        <div class="pw-row">
+          <input id="password" type="password" autocomplete="current-password">
+          <button type="button" id="togglePw" class="pw-toggle" aria-label="Show password">Show</button>
+        </div>
+
+        <label class="check"><input type="checkbox" id="keep"> Keep me signed in</label>
+
+        <p id="loginError" class="form-error" role="alert" hidden></p>
+        <button class="btn wide" type="submit">Log in</button>
+      </form>
+
+      <!-- Sign Up Form (Clients Only) -->
+      <form id="signupForm" style="display: none;" novalidate>
+        <h1>Create Account</h1>
+        <p class="login-sub">Sign up to place your orders.</p>
+
+        <label for="signupName">Full Name</label>
+        <input id="signupName" type="text" placeholder="e.g. John Doe" required>
+
+        <label for="signupUser">Username</label>
+        <input id="signupUser" type="text" placeholder="Choose a username" required autocapitalize="none">
+
+        <label for="signupPass">Password</label>
+        <input id="signupPass" type="password" placeholder="Create a password" required>
+
+        <p id="signupError" class="form-error" role="alert" hidden style="margin-top:1rem;"></p>
+        <button class="btn wide" type="submit" style="margin-top:1rem;">Sign up</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="js/login.js"></script>
+</body>
+</html>
