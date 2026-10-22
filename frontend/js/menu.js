@@ -1,6 +1,9 @@
 let menu = [];
-let cart = {};              
+let cart = {};
 let activeCategory = "All";
+
+// Must match the address of your Spring Boot backend.
+const MENU_API = "http://localhost:8080/api/menu";
 
 async function init() {
   renderModeBadge();
@@ -11,9 +14,10 @@ async function init() {
     renderMenu();
     renderCart();
     loadCustomerReceipts();
-    
-    // Auto-refresh receipts every 5 seconds
+
+    // Auto-refresh receipts and menu every 5 seconds
     setInterval(loadCustomerReceipts, 5000);
+    setInterval(refreshMenu, 5000);
   } catch (err) {
     document.getElementById("menuGrid").innerHTML =
       '<p class="empty">Could not load the menu. Is the server running?<br><small>' + esc(err.message) + "</small></p>";
@@ -34,6 +38,44 @@ function setupUserPermissions() {
     adminSection.style.display = "block";
   }
 }
+
+/* ---------- Saving to the backend ---------- */
+
+// Sends JSON to the backend. Throws an Error with a readable message on failure.
+async function sendToServer(url, method, body) {
+  const res = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    throw new Error("Server said " + res.status + " when saving the menu item.");
+  }
+  return res.json();
+}
+
+// Reloads the menu from the database so customers see changes without refreshing.
+async function refreshMenu() {
+  try {
+    const fresh = await Api.getMenu();
+    if (JSON.stringify(fresh) === JSON.stringify(menu)) return;
+    menu = fresh;
+
+    // Remove cart items that were deleted or went out of stock
+    Object.keys(cart).forEach(id => {
+      const m = menu.find(x => x.id === Number(id));
+      if (!m || !m.available) delete cart[id];
+    });
+
+    renderFilters();
+    renderMenu();
+    renderCart();
+  } catch (e) {
+    console.error("Menu refresh failed:", e);
+  }
+}
+
+/* ---------- Rendering ---------- */
 
 function renderFilters() {
   const cats = ["All", ...new Set(menu.map(m => m.category))];
@@ -82,12 +124,21 @@ function renderMenu() {
   }
 }
 
+/* ---------- Admin actions ---------- */
+
 async function toggleItemAvailability(id) {
   const item = menu.find(m => m.id === id);
   if (!item) return;
 
-  item.available = !item.available;
-  if (Api.saveMenu) await Api.saveMenu(menu);
+  const newValue = !item.available;
+  try {
+    // Saves the change to the database
+    const saved = await sendToServer(MENU_API + "/" + id, "PUT", { ...item, available: newValue });
+    item.available = saved && typeof saved.available === "boolean" ? saved.available : newValue;
+  } catch (err) {
+    showToast(err.message, true);
+    return;
+  }
 
   // If item is marked out of stock, remove it from current cart
   if (!item.available && cart[id]) {
@@ -98,6 +149,48 @@ async function toggleItemAvailability(id) {
   renderMenu();
   showToast(`${item.name} is now ${item.available ? "available" : "out of stock"}.`);
 }
+
+async function handleAddMenuItem(event) {
+  event.preventDefault();
+
+  const nameInput = document.getElementById("itemNameInput");
+  const priceInput = document.getElementById("itemPriceInput");
+  const categoryInput = document.getElementById("itemCategorySelect");
+
+  const itemName = nameInput.value.trim();
+  const itemPrice = parseFloat(priceInput.value);
+  const itemCategory = categoryInput.value;
+
+  if (!itemName || isNaN(itemPrice)) {
+    showToast("Please enter a valid item name and price.", true);
+    return;
+  }
+
+  // No id here: the database creates it.
+  const newItem = {
+    name: itemName,
+    price: itemPrice,
+    category: itemCategory,
+    available: true
+  };
+
+  try {
+    // Saves to the database and returns the item with its real id
+    const saved = await sendToServer(MENU_API, "POST", newItem);
+    menu.push(saved);
+  } catch (err) {
+    showToast("Could not save the item. Is the server running? " + err.message, true);
+    return;
+  }
+
+  renderFilters();
+  renderMenu();
+
+  document.getElementById("addMenuItemForm").reset();
+  showToast(`Added ${itemName} to menu!`);
+}
+
+/* ---------- Cart ---------- */
 
 function addToCart(id) { cart[id] = (cart[id] || 0) + 1; renderCart(); }
 
@@ -117,6 +210,7 @@ function renderCart() {
   } else {
     list.innerHTML = ids.map(id => {
       const m = menu.find(x => x.id === id);
+      if (!m) return "";
       const sub = m.price * cart[id];
       total += sub;
       return `
@@ -159,6 +253,8 @@ async function placeOrder(event) {
   }
 }
 
+/* ---------- Receipts ---------- */
+
 async function loadCustomerReceipts() {
   const user = Auth.current();
   if (!user) return;
@@ -183,14 +279,14 @@ async function loadCustomerReceipts() {
 
       return `
         <div class="receipt-card" style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:1rem; margin-top:1rem;">
-          <div style="display:flex; justify-between; align-items:center; margin-bottom:0.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
             <strong>Order #${o.id}</strong>
             <span class="status s-${o.status}" style="font-size:0.75rem; padding:0.2rem 0.5rem; border-radius:4px; font-weight:bold; background:#f1e8dc;">${o.status}</span>
           </div>
           <ul style="list-style:none; padding:0; margin:0.5rem 0; font-size:0.85rem;">
-            ${o.items.map(i => `<li style="display:flex; justify-between;"><span>${i.quantity} × ${esc(i.itemName)}</span> <span>${peso(i.unitPrice * i.quantity)}</span></li>`).join("")}
+            ${o.items.map(i => `<li style="display:flex; justify-content:space-between;"><span>${i.quantity} \u00d7 ${esc(i.itemName)}</span> <span>${peso(i.unitPrice * i.quantity)}</span></li>`).join("")}
           </ul>
-          <div style="display:flex; justify-between; align-items:center; border-top:1px dashed var(--line); padding-top:0.5rem; margin-top:0.5rem; font-size:0.9rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--line); padding-top:0.5rem; margin-top:0.5rem; font-size:0.9rem;">
             <strong>Total: ${peso(o.total)}</strong>
             ${isPending ? `
               <button class="btn ghost cancel-order-btn" data-id="${o.id}" style="padding:0.25rem 0.6rem; font-size:0.8rem; border:1px solid var(--bad); color:var(--bad);">Cancel Order</button>
@@ -220,46 +316,14 @@ async function cancelCustomerOrder(orderId) {
   }
 }
 
-async function handleAddMenuItem(event) {
-  event.preventDefault();
-  
-  const nameInput = document.getElementById('itemNameInput');
-  const priceInput = document.getElementById('itemPriceInput');
-  const categoryInput = document.getElementById('itemCategorySelect');
-
-  const itemName = nameInput.value.trim();
-  const itemPrice = parseFloat(priceInput.value);
-  const itemCategory = categoryInput.value;
-
-  if (!itemName || isNaN(itemPrice)) {
-    showToast('Please enter a valid item name and price.', true);
-    return;
-  }
-
-  const newItem = {
-    id: Date.now(),
-    name: itemName,
-    price: itemPrice,
-    category: itemCategory,
-    available: true
-  };
-
-  menu.push(newItem);
-  if (Api.saveMenu) await Api.saveMenu(menu);
-
-  renderFilters();
-  renderMenu();
-  
-  document.getElementById('addMenuItemForm').reset();
-  showToast(`Added ${itemName} to menu!`);
-}
+/* ---------- Start ---------- */
 
 document.addEventListener("DOMContentLoaded", () => {
   const orderForm = document.getElementById("orderForm");
   const addMenuForm = document.getElementById("addMenuItemForm");
-  
+
   if (orderForm) orderForm.addEventListener("submit", placeOrder);
   if (addMenuForm) addMenuForm.addEventListener("submit", handleAddMenuItem);
-  
+
   init();
 });
