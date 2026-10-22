@@ -1,5 +1,5 @@
 const CONFIG = {
   USE_MOCK: false,
-  API_BASE_URL: "http://localhost:8080",   // after deploying, use your Render URL
+  API_BASE_URL: "https://cafe-management-orderingsystem.onrender.com",
   VERSION: "v1.1.0"
 };

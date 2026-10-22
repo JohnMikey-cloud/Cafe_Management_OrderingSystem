@@ -2,12 +2,14 @@ let menu = [];
 let cart = {};
 let activeCategory = "All";
 
-// Must match the address of your Spring Boot backend.
-const MENU_API = "http://localhost:8080/api/menu";
+// Address of your Spring Boot backend on Render (no trailing slash).
+const MENU_API = "https://cafe-management-orderingsystem.onrender.com/api/menu";
 
 async function init() {
   renderModeBadge();
   setupUserPermissions();
+  document.getElementById("menuGrid").innerHTML =
+    '<p class="empty">Loading the menu...<br><small>The server may take up to a minute to wake up.</small></p>';
   try {
     menu = await Api.getMenu();
     renderFilters();
